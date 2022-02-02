@@ -1,0 +1,52 @@
+pipeline {
+
+    environment {
+    CURRENT_CONTAINER="default"
+  }
+
+  agent {
+    kubernetes {
+      defaultContainer 'jnlp'
+      yaml '''
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: rev-app
+            image: docker.io/lirondadon/rev-bash-app
+            imagePullPolicy: IfNotPresent
+            tty: true
+          - name: kubectl
+            image: gcr.io/cloud-builders/kubectl
+            imagePullPolicy: IfNotPresent
+            command:
+            - cat
+            tty: true
+        '''
+    }
+  }
+  stages {
+    stage('Set Container Name') {
+      steps {
+          container('kubectl') {
+            withCredentials([
+            string(credentialsId: 'minikube', variable: 'api_token')
+            ]) {
+            script {
+                    CURRENT_CONTAINER=sh(script: 'kubectl get pods -n jenkins -l job-name=pi -o jsonpath="{.items[*].spec.containers[0].name}"',
+                                        returnStdout: true
+                                        ).trim()
+                    echo "Exec container ${CURRENT_CONTAINER}"
+            }
+          }
+        }
+      }
+    }
+
+    stage('Echo Container Name') {
+      steps {
+          echo "CURRENT_CONTAINER is ${CURRENT_CONTAINER}"
+      }
+    }
+  }
+}

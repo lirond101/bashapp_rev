@@ -1,0 +1,33 @@
+pipeline {
+  agent {
+    kubernetes {
+      yaml '''
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: rev-app
+            image: docker.io/lirondadon/rev-bash-app
+            imagePullPolicy: IfNotPresent
+            tty:
+            volumeMounts:
+            - mountPath: /usr/src/app
+              name: bashapp-src
+          volumes:
+          - name: bashapp-src
+            hostPath:
+              path: /usr/src/app
+        '''
+    }
+  }
+  stages {
+    stage('Run app') {
+      steps {
+        container('rev-app') {
+          sh '/rev_str.sh reverse-it'\
+        // sh 'echo hello world'
+        }
+      }
+    }
+  }
+}
